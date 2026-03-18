@@ -1,4 +1,4 @@
-# boobawamba
+# Flashlight
 
 Mod that recreates a flashlight beam, seen in many levels. is somewhat customizable in the settings.
 
