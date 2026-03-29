@@ -6,6 +6,8 @@ class PixelTrail : public CCNode {
     struct Px { CCDrawNode* n; CCPoint v; float life, max; };
     std::vector<Px> m_px;
     float m_t = 0;
+    float m_alpha = 0.f;
+    float m_targetAlpha = 0.f;
 public:
     static PixelTrail* create() {
         auto n = new PixelTrail();
@@ -13,25 +15,32 @@ public:
         CC_SAFE_DELETE(n); return nullptr;
     }
     bool init() override { if (!CCNode::init()) return false; scheduleUpdate(); return true; }
+
+    void setGrounded(bool grounded) { m_targetAlpha = grounded ? 1.f : 0.f; }
+
     void update(float dt) override {
+        m_alpha += (m_targetAlpha - m_alpha) * dt * 38.f;
+        m_alpha = std::clamp(m_alpha, 0.f, 1.f);
+
         for (m_t += dt; m_t > 0.03f; m_t -= 0.03f)
-            if ((int)m_px.size() < 60) {
-                float s = 2.5f + (rand()%30)/10.f;
+            if (m_alpha > 0.01f && (int)m_px.size() < 60) {
+                float s = 2.f + (rand() % 20) / 10.f;
                 auto* node = CCDrawNode::create();
                 CCPoint sq[4] = {CCPoint(-s/2,-s/2),CCPoint(s/2,-s/2),CCPoint(s/2,s/2),CCPoint(-s/2,s/2)};
                 node->drawPolygon(sq, 4, ccc4f(1.f,.52f,.05f,1.f), 0, ccc4f(0,0,0,0));
-                node->setPosition(CCPoint(-8.f-(rand()%8),-8.f+(rand()%16)));
+                node->setPosition(CCPoint(-4.f-(rand()%5),-6.f+(rand()%6)));
                 addChild(node);
-                float life = 0.25f+(rand()%30)/100.f;
-                m_px.push_back({node,CCPoint(-55.f-(float)(rand()%80),-20.f+(float)(rand()%40)),life,life});
+                float life = 0.2f+(rand()%20)/100.f;
+                m_px.push_back({node,CCPoint(-70.f-(float)(rand()%40),-5.f+(float)(rand()%10)),life,life});
             }
+
         for (auto it = m_px.begin(); it != m_px.end();) {
             it->life -= dt;
             if (it->life <= 0) { it->n->removeFromParent(); it = m_px.erase(it); continue; }
             it->n->setPosition(it->n->getPosition() + it->v * dt);
             float t = it->life / it->max;
-            it->n->setOpacity((GLubyte)(t*255));
-            it->n->setScale(t*0.9f+0.1f);
+            it->n->setOpacity((GLubyte)(t * m_alpha * 255));
+            it->n->setScale(t * 0.8f + 0.2f);
             ++it;
         }
     }
@@ -111,7 +120,8 @@ class $modify(BoobaPlayLayer, PlayLayer) {
     void updateTrail(PixelTrail* trail, PlayerObject* p) {
         CCPoint lp = convertToNodeSpace(p->getParent()->convertToWorldSpace(p->getPosition()));
         trail->setPosition(CCPoint(lp.x+(p->isFlipX()?14.f:-14.f),lp.y));
-        trail->setVisible(p->m_isOnGround);
+        bool canTrail = p->m_isOnGround && !p->m_isDart && !p->m_isBird;
+        trail->setGrounded(canTrail);
     }
 
     void tick(float) {
@@ -119,7 +129,7 @@ class $modify(BoobaPlayLayer, PlayLayer) {
         bool dual = m_player2 && m_gameState.m_isDualMode;
         m_fields->darkness->redraw(this, m_player1, dual ? m_player2 : nullptr);
         updateTrail(m_fields->trail1, m_player1);
-        m_fields->trail2->setVisible(false);
+        m_fields->trail2->setGrounded(false);
         if (dual) updateTrail(m_fields->trail2, m_player2);
     }
 };
