@@ -8,7 +8,7 @@
 	},
 	"id": "quadruplea0.flashlight",
 	"name": "Flashlight",
-	"version": "v1.0.0",
+	"version": "v1.0.1",
 	"developer": "quadruplea0",
 	"description": "Flashlight effect to use on any level",
 	"dependencies": {
